@@ -2,20 +2,23 @@ const { db } = require('../util/admin')
 
 exports.getAllSayits = (req, res) => {
     db
-        .collection('sayit')
+        .collection('sayits')
         .orderBy('createdAt', 'desc')
         .get()
         .then((data) => {
-            let sayit = [];
-            data.forEach(doc => {
-                sayit.push({
+            let sayits = [];
+            data.forEach((doc) => {
+                sayits.push({
                     sayitId: doc.id,
                     body: doc.data().body,
                     userHandle: doc.data().userHandle,
-                    createdAt: doc.data().createdAt
+                    createdAt: doc.data().createdAt,
+                    commentCount: doc.data().commentCount,
+                    likeCount: doc.data().likeCount,
+                    userImage: doc.data().userImage
                 });
             });
-            return res.json(sayit);
+            return res.json(sayits);
         })
         .catch(err => console.log(err));
 }

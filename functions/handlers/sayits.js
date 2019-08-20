@@ -20,7 +20,10 @@ exports.getAllSayits = (req, res) => {
             });
             return res.json(sayits);
         })
-        .catch(err => console.log(err));
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err.code });
+          });
 }
 
 exports.postOneSayit = (req, res) => {
@@ -74,10 +77,10 @@ exports.getSayit = (req, res) => {
             });
             return res.json(sayitData);
         })
-        .catch(err => {
-            console.error(err)
-            res.status(500).json({ error: "There is an error" })
-        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).json({ error: err.code });
+          });
 }
 
 // Comment on a sayit
@@ -100,29 +103,33 @@ exports.commentOnSayit = (req, res) => {
         if (!doc.exists) {
           return res.status(404).json({ error: 'Sayit not found' });
         }
-        console.log("Comment count: ", doc.data().commentCount + 1 )
         return doc.ref.update({ commentCount: doc.data().commentCount + 1 });
       })
       .then(() => {
         return db.collection('comments').add(newComment);
       })
       .then(() => {
-        return res.json(newComment);
+         res.json(newComment);
       })
       .catch((err) => {
         console.log(err);
-        return res.status(500).json({ error: 'Something went wrong' });
+        res.status(500).json({ error: 'Something went wrong' });
       });
   };
-
-
+// Like a scream
 exports.likeSayit = (req, res) => {
-    const likeDocument = db.collection('likes').where('userHandle', '==', req.user.handle)
-        .where('sayitId', '==', req.params.sayitId).limit(1);
-    const sayitDocument = db.doc(`/sayit/${req.params.sayitId}`);
+    const likeDocument = db
+    .collection('likes')
+    .where('userHandle', '==', req.user.handle)
+        .where('sayitId', '==', req.params.sayitId)
+        .limit(1);
+
+    const sayitDocument = db.doc(`/sayits/${req.params.sayitId}`);
 
     let sayitData;
-    sayitDocument.get()
+
+    sayitDocument
+    .get()
         .then(doc => {
             if (doc.exists) {
                 sayitData = doc.data();
@@ -134,12 +141,14 @@ exports.likeSayit = (req, res) => {
         })
         .then(data => {
             if (data.empty) {
-                return db.collection('likes').add({
+                return db
+                .collection('likes')
+                .add({
                     sayitId: req.params.sayitId,
                     userHandle: req.user.handle
                 })
                     .then(() => {
-                        sayitData.likeCount++
+                        sayitData.likeCount++;
                         return sayitDocument.update({ likeCount: sayitData.likeCount });
                     })
                     .then(() => {
@@ -153,16 +162,21 @@ exports.likeSayit = (req, res) => {
             console.error(err);
             res.status(500).json({ error: err.code });
         })
-}
+};
 
 exports.unlikeSayit = (req, res) => {
-    const likeDocument = db.collection('likes').where('userHandle', '==', req.user.handle)
-        .where('sayitId', '==', req.params.sayitId).limit(1);
-    const sayitDocument = db.doc(`/sayit/${req.params.sayitId}`);
+    const likeDocument = db
+    .collection('likes')
+    .where('userHandle', '==', req.user.handle)
+        .where('sayitId', '==', req.params.sayitId)
+        .limit(1);
+
+    const sayitDocument = db.doc(`/sayits/${req.params.sayitId}`);
 
     let sayitData;
 
-    sayitDocument.get()
+    sayitDocument
+    .get()
         .then(doc => {
             if (doc.exists) {
                 sayitData = doc.data();
@@ -177,7 +191,8 @@ exports.unlikeSayit = (req, res) => {
                 return res.status(400).json({ error: 'Sayit not liked' })
 
             } else {
-                return db.doc(`/likes/${data.docs[0].id}`)
+                return db
+                .doc(`/likes/${data.docs[0].id}`)
                     .delete()
                     .then(() => {
                         sayitData.likeCount--;

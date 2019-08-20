@@ -1,12 +1,14 @@
 const functions = require('firebase-functions');
 
 const app = require('express')();
-
 const FBAuth = require('./util/fbAuth')
+
+
 
 const { db } = require('./util/admin')
 
-const { getAllSayits,
+const { 
+    getAllSayits,
     postOneSayit,
     getSayit,
     commentOnSayit,
@@ -15,14 +17,15 @@ const { getAllSayits,
     deleteSayit
 } = require('./handlers/sayits')
 
-const { signup,
+const { 
+    signup,
     login,
     uploadImage,
     addUserDetails,
     getAuthenticatedUser,
     getUserDetails,
     markNotificationsRead
-} = require('./handlers/users')
+} = require('./handlers/users');
 
 //Sayit route 
 app.get('/sayits', getAllSayits)
@@ -40,7 +43,7 @@ app.post('/user/image', FBAuth, uploadImage);
 app.post('/user', FBAuth, addUserDetails);
 app.get('/user', FBAuth, getAuthenticatedUser);
 app.get('/user/:handle', getUserDetails);
-app.post('/notifications', FBAuth, markNotificationsRead)
+app.post('/notifications', FBAuth, markNotificationsRead);
 
 exports.api = functions.region('europe-west1').https.onRequest(app);
 
@@ -48,10 +51,12 @@ exports.createNotificationOnLike = functions
     .region('europe-west1')
     .firestore.document('likes/{id}')
     .onCreate((snapshot) => {
-        return db.doc(`/sayits/${snapshot.data().sayitId}`)
+        return db
+        .doc(`/sayits/${snapshot.data().sayitId}`)
             .get()
             .then((doc) => {
-                if (doc.exists && doc.data().userHandle !== snapshot.data().userHandle) {
+                if (doc.exists && 
+                    doc.data().userHandle !== snapshot.data().userHandle) {
                     return db.doc(`/notifications/${snapshot.id}`).set(
                         {
                             createdAt: new Date().toISOString(),
@@ -66,21 +71,23 @@ exports.createNotificationOnLike = functions
             .catch((err) =>
                 console.error(err))
     });
-exports.deleteNotificationOnUnlike = functions.region('europe-west1')
+exports.deleteNotificationOnUnLike = functions
+.region('europe-west1')
     .firestore.document('likes/{id}')
     .onDelete((snapshot) => {
-        return db.doc(`/notifications/${snapshot.id}`)
+        return db
+        .doc(`/notifications/${snapshot.id}`)
             .delete()
-            .catch(err => {
+            .catch((err) => {
                 console.error(err);
                 return;
-            })
-    })
+            });
+    });
 exports.createNotificationOnComment = functions.region('europe-west1')
     .firestore.document('comments/{id}')
     .onCreate((snapshot) => {
         return db.doc(`/sayits/${snapshot.data().sayitId}`).get()
-            .then(doc => {
+            .then((doc) => {
                 if (doc.exists && doc.data().userHandle !== snapshot.data().userHandle) {
                     return db.doc(`/notifications/${snapshot.id}`).set(
                         {
@@ -94,7 +101,7 @@ exports.createNotificationOnComment = functions.region('europe-west1')
                     );
                 }
             })
-            .catch(err => {
+            .catch((err) => {
                 console.error(err);
                 return;
             });
@@ -104,7 +111,7 @@ exports.onUserImageChange = functions.region('europe-west1').firestore.document(
     .onUpdate((change) => {
         console.log(change.before.data());
         console.log(change.after.data());
-        if (change.before.data().imageUrl !== change.after.data.imageUrl) {
+        if (change.before.data().imageUrl !== change.after.data().imageUrl) {
             console.log('Image has changed')
             const batch = db.batch();
             return db.collection('sayits').where('userHandle', '==', change.before.data().handle).get()
@@ -118,31 +125,36 @@ exports.onUserImageChange = functions.region('europe-west1').firestore.document(
         } else return true;
     })
 
-    exports.onUserImageChange = functions
+    exports.onSayitDelete = functions
     .region('europe-west1')
     .firestore.document('/sayits/{sayitId}')
-    .onDelete((snapshot, context)=> {
+    .onDelete((snapshot, context) => {
         const sayitId = context.params.sayitId;
         const batch = db.batch();
-        return db.collection('comments').where('sayitId', '==', sayitId).get()
-        .then(data => {
-            data.forEach(doc => {
+        return db
+        .collection('comments')
+        .where('sayitId', '==', sayitId).get()
+        .then((data) => {
+            data.forEach((doc) => {
                 batch.delete(db.doc(`/comments/${doc.id}`));
             })
-            return db.collection('likes').where('sayitId', '==', sayitId).get();
+            return db
+            .collection('likes')
+            .where('sayitId', '==', sayitId)
+            .get();
         })
-        .then(data => {
+        .then((data) => {
             data.forEach(doc => {
                 batch.delete(db.doc(`/likes/${doc.id}`));
             })
             return db.collection('notifications').where('sayitId', '==', sayitId).get();
         })
-        .then(data => {
-            data.forEach(doc => {
+        .then((data) => {
+            data.forEach((doc) => {
                 batch.delete(db.doc(`/notifications/${doc.id}`));
-            })
+            });
             return batch.commit();
         })
-        .catch(err => console.error(err))
-    })
+        .catch((err) => console.error(err));
+    });
     
